@@ -2,12 +2,12 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>VR Train of Thought - Lumosity Clone</title>
+    <title>VR Train of Thought - Stereo Mode</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script>
-      // OYUN DURUMU VE AYARLARI
+      // OYUN DURUMU VE AYARLARI (DEĞİŞMEDİ)
       let mevcutSeviye = 1;
-      let renkCesitliligi = 4; // Menüden seçilecek (2, 3 veya 4 renkli tren)
+      let renkCesitliligi = 4;
       let oyunAktif = false;
       let trenUretimInterval;
       
@@ -16,9 +16,9 @@
         6: 0.05,  7: 0.06, 8: 0.07,  9: 0.08, 10: 0.10
       };
 
-      const renkHavuzu = ['#FF3333', '#3333FF', '#33FF33', '#FFFF33']; // Kırmızı, Mavi, Yeşil, Sarı
+      const renkHavuzu = ['#FF3333', '#3333FF', '#33FF33', '#FFFF33'];
 
-      // REFAKTÖR EDİLMİŞ MENÜ BİLEŞENİ
+      // MENÜ BİLEŞENİ (DEĞİŞMEDİ)
       AFRAME.registerComponent('menu-butonu', {
         schema: { tip: {type: 'string'}, deger: {type: 'int'} },
         init: function () {
@@ -37,30 +37,26 @@
         }
       });
 
-      // ORİJİNAL TREN MAKASI (SWITCH) BİLEŞENİ
+      // RAY MAKASI BİLEŞENİ (DEĞİŞMEDİ)
       AFRAME.registerComponent('ray-makasi', {
         schema: { varsayilanYon: {type: 'string', default: 'sol'} },
         init: function () {
           this.yon = this.data.varsayilanYon;
           this.ayarlaGorsel();
-          
           this.el.addEventListener('mouseenter', () => {
             if (!oyunAktif) return;
             this.yon = (this.yon === "sol") ? "sag" : "sol";
             this.ayarlaGorsel();
-            
-            // Gerçekçi makas değiştirme sesi efekti tetiklenebilir (opsiyonel)
           });
         },
         ayarlaGorsel: function() {
-          // Orijinal oyundaki gibi demiryolu makas yönünü görsel olarak döndürür
           let aci = (this.yon === "sol") ? 30 : -30;
           this.el.setAttribute('rotation', `0 0 ${aci}`);
           this.el.setAttribute('color', (this.yon === "sol") ? "#E74C3C" : "#2ECC71");
         }
       });
 
-      // LUMOSITY TREN HAREKET MOTORU (PATH ROUTING)
+      // TREN HAREKET MOTORU (DEĞİŞMEDİ)
       AFRAME.registerComponent('tren-motoru', {
         init: function () {
           this.hiz = seviyeHizlari[mevcutSeviye];
@@ -70,51 +66,38 @@
           if (!oyunAktif) return;
           let pos = this.el.getAttribute('position');
 
-          // Orijinal oyundaki katmanlı ray hiyerarşisi akışı
           switch(this.currentSegment) {
             case "ana_hat":
               pos.y -= this.hiz;
-              // 1. Üst Ana Makas Noktası
               if (pos.y <= 3.8) {
                 let makas = document.querySelector('#ustMakas').components['ray-makasi'];
                 this.currentSegment = (makas.yon === "sol") ? "sol_ust_kol" : "sag_ust_kol";
               }
               break;
-
             case "sol_ust_kol":
               pos.y -= this.hiz * 0.7;
               pos.x -= this.hiz * 0.7;
-              // 2. Sol Alt Makas Noktası
               if (pos.y <= 2.3) {
                 let makas = document.querySelector('#solAltMakas').components['ray-makasi'];
                 this.currentSegment = (makas.yon === "sol") ? "istasyon_kirmizi" : "istasyon_mavi";
               }
               break;
-
             case "sag_ust_kol":
               pos.y -= this.hiz * 0.7;
               pos.x += this.hiz * 0.7;
-              // 3. Sağ Alt Makas Noktası
               if (pos.y <= 2.3) {
                 let makas = document.querySelector('#sagAltMakas').components['ray-makasi'];
                 this.currentSegment = (makas.yon === "sol") ? "istasyon_yesil" : "istasyon_sari";
               }
               break;
-
-            // İSTASYONLARA GİRİŞ (Düz Aşağı Akış)
-            case "istasyon_kirmizi":
-              pos.y -= this.hiz; pos.x = -1.5; break;
-            case "istasyon_mavi":
-              pos.y -= this.hiz; pos.x = -0.5; break;
-            case "istasyon_yesil":
-              pos.y -= this.hiz; pos.x = 0.5; break;
-            case "istasyon_sari":
-              pos.y -= this.hiz; pos.x = 1.5; break;
+            case "istasyon_kirmizi": pos.y -= this.hiz; pos.x = -1.5; break;
+            case "istasyon_mavi": pos.y -= this.hiz; pos.x = -0.5; break;
+            case "istasyon_yesil": pos.y -= this.hiz; pos.x = 0.5; break;
+            case "istasyon_sari": pos.y -= this.hiz; pos.x = 1.5; break;
           }
 
           this.el.setAttribute('position', pos);
 
-          // İstasyona tamamen girdiğinde treni park et/sil
           if (pos.y <= 0.6) {
             this.el.parentNode.removeChild(this.el);
           }
@@ -131,7 +114,6 @@
         document.querySelector('#anaMenuGrup').setAttribute('visible', 'false');
         document.querySelector('#anaMenuGrup').removeAttribute('class');
         
-        // Belli aralıklarla yeni tren vagonları gönderen döngü
         trenUretimInterval = setInterval(trenVagonuUret, 3500 - (mevcutSeviye * 200));
         trenVagonuUret();
       }
@@ -141,18 +123,15 @@
         let scene = document.querySelector('a-scene');
         let trenGrup = document.createElement('a-entity');
         
-        // Seçilen varyasyona göre rastgele tren rengi belirle
         let aktifRenkler = renkHavuzu.slice(0, renkCesitliligi);
         let trenRengi = aktifRenkler[Math.floor(Math.random() * aktifRenkler.length)];
 
-        // Tren Lokomotifi Görünümü (Orijinal kutu tren tasarımı)
         let gövde = document.createElement('a-box');
         gövde.setAttribute('width', '0.25');
         gövde.setAttribute('height', '0.4');
         gövde.setAttribute('depth', '0.2');
         gövde.setAttribute('color', trenRengi);
 
-        // Tren vagon çizgileri (Görsel sadakat için)
         let cizgi = document.createElement('a-box');
         cizgi.setAttribute('width', '0.18');
         cizgi.setAttribute('height', '0.05');
@@ -167,15 +146,30 @@
         
         scene.appendChild(trenGrup);
       }
+
+      // STEREO / VR MODUNU OTOMATİK TETİKLEME (YENİ)
+      // Telefon yan çevrildiğinde veya sayfa yüklendiğinde kullanıcı etkileşimiyle 
+      // stereo görünüme geçişi garanti altına almak için sahne dinleyicisi eklendi.
+      window.addEventListener('click', function () {
+        let scene = document.querySelector('a-scene');
+        if (scene && !scene.is('vr-mode')) {
+          scene.enterVR(); // Ekranı çift göz (Stereo) moduna zorlar
+        }
+      });
     </script>
   </head>
   <body>
 
-    <a-scene>
+    <a-scene vr-mode-ui="enabled: true; enterVRButton: #VRButonu">
       <a-sky color="#2C3E50"></a-sky>
 
       <a-entity camera look-controls position="0 2 0">
-        <a-cursor id="cursor" raycaster="objects: .tıklanabilir" material="color: #FFFFFF; shader: flat" position="0 0 -1" geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.025"></a-cursor>
+        <a-cursor id="cursor" 
+                  raycaster="objects: .tıklanabilir" 
+                  material="color: #FFFFFF; shader: flat" 
+                  position="0 0 -1" 
+                  geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.025">
+        </a-cursor>
       </a-entity>
 
       <a-entity id="anaMenuGrup" position="0 2.2 -2.5">
@@ -195,38 +189,30 @@
         <a-box class="tıklanabilir" menu-butonu="tip: tren_sayisi; deger: 3" position="-0.15 -0.4 0.05" width="0.15" height="0.15" depth="0.05" color="#9B59B6"><a-text value="3" align="center" position="0 0 0.03" width="3"></a-text></a-box>
         <a-box class="tıklanabilir" menu-butonu="tip: tren_sayisi; deger: 4" position="0.1 -0.4 0.05" width="0.15" height="0.15" depth="0.05" color="#9B59B6"><a-text value="4" align="center" position="0 0 0.03" width="3"></a-text></a-box>
 
-        <a-box class="tıklanabilir" menu-butonu="tip: basla" position="0 -0.7 0.05" width="0.7" height="0.2.2" depth="0.05" color="#2ECC71">
+        <a-box class="tıklanabilir" menu-butonu="tip: basla" position="0 -0.7 0.05" width="0.7" height="0.2" depth="0.05" color="#2ECC71">
           <a-text value="OYUNU BASLAT" align="center" position="0 0 0.03" width="3.5" color="#FFF"></a-text>
         </a-box>
       </a-entity>
 
-
       <a-box position="0 4.7 -3.5" width="0.08" height="1.6" depth="0.02" color="#7F8C8D"></a-box>
-
       <a-box id="ustMakas" class="tıklanabilir" ray-makasi="varsayilanYon: sol" position="0 3.8 -3.5" width="0.08" height="0.5" depth="0.04"></a-box>
-
       <a-box position="-0.75 3.0 -3.5" width="0.08" height="1.8" depth="0.02" rotation="0 0 45" color="#7F8C8D"></a-box>
       <a-box position="0.75 3.0 -3.5" width="0.08" height="1.8" depth="0.02" rotation="0 0 -45" color="#7F8C8D"></a-box>
-
       <a-box id="solAltMakas" class="tıklanabilir" ray-makasi="varsayilanYon: sol" position="-1.4 2.2 -3.5" width="0.08" height="0.5" depth="0.04"></a-box>
       <a-box id="sagAltMakas" class="tıklanabilir" ray-makasi="varsayilanYon: sag" position="1.4 2.2 -3.5" width="0.08" height="0.5" depth="0.04"></a-box>
+      <a-box position="-1.5 1.4 -3.5" width="0.06" height="1.2" depth="0.02" color="#BDC3C7"></a-box>
+      <a-box position="-0.5 1.4 -3.5" width="0.06" height="1.2" depth="0.02" color="#BDC3C7"></a-box>
+      <a-box position="0.5 1.4 -3.5" width="0.06" height="1.2" depth="0.02" color="#BDC3C7"></a-box>
+      <a-box position="1.5 1.4 -3.5" width="0.06" height="1.2" depth="0.02" color="#BDC3C7"></a-box>
 
-      <a-box position="-1.5 1.4 -3.5" width="0.06" height="1.2" depth="0.02" color="#BDC3C7"></a-box> <a-box position="-0.5 1.4 -3.5" width="0.06" height="1.2" depth="0.02" color="#BDC3C7"></a-box> <a-box position="0.5 1.4 -3.5" width="0.06" height="1.2" depth="0.02" color="#BDC3C7"></a-box>  <a-box position="1.5 1.4 -3.5" width="0.06" height="1.2" depth="0.02" color="#BDC3C7"></a-box>  <a-box position="-1.5 0.5 -3.5" width="0.4" height="0.5" depth="0.4" color="#FF3333" opacity="0.8">
-        <a-box position="0 0 0.21" width="0.3" height="0.3" depth="0.02" color="#FFF"></a-box>
-      </a-box>
-      
-      <a-box position="-0.5 0.5 -3.5" width="0.4" height="0.5" depth="0.4" color="#3333FF" opacity="0.8">
-        <a-box position="0 0 0.21" width="0.3" height="0.3" depth="0.02" color="#FFF"></a-box>
-      </a-box>
-      
-      <a-box position="0.5 0.5 -3.5" width="0.4" height="0.5" depth="0.4" color="#33FF33" opacity="0.8">
-        <a-box position="0 0 0.21" width="0.3" height="0.3" depth="0.02" color="#FFF"></a-box>
-      </a-box>
-      
-      <a-box position="1.5 0.5 -3.5" width="0.4" height="0.5" depth="0.4" color="#FFFF33" opacity="0.8">
-        <a-box position="0 0 0.21" width="0.3" height="0.3" depth="0.02" color="#FFF"></a-box>
-      </a-box>
+      <a-box position="-1.5 0.5 -3.5" width="0.4" height="0.5" depth="0.4" color="#FF3333" opacity="0.8"><a-box position="0 0 0.21" width="0.3" height="0.3" depth="0.02" color="#FFF"></a-box></a-box>
+      <a-box position="-0.5 0.5 -3.5" width="0.4" height="0.5" depth="0.4" color="#3333FF" opacity="0.8"><a-box position="0 0 0.21" width="0.3" height="0.3" depth="0.02" color="#FFF"></a-box></a-box>
+      <a-box position="0.5 0.5 -3.5" width="0.4" height="0.5" depth="0.4" color="#33FF33" opacity="0.8"><a-box position="0 0 0.21" width="0.3" height="0.3" depth="0.02" color="#FFF"></a-box></a-box>
+      <a-box position="1.5 0.5 -3.5" width="0.4" height="0.5" depth="0.4" color="#FFFF33" opacity="0.8"><a-box position="0 0 0.21" width="0.3" height="0.3" depth="0.02" color="#FFF"></a-box></a-box>
 
     </a-scene>
+
+    <div id="VRButonu" style="display:none;"></div>
+
   </body>
 </html>
