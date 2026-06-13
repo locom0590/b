@@ -7,8 +7,7 @@
     <script>
       // OYUN DEĞİŞKENLERİ
       let mevcutSeviye = 1;
-      let toplamBilyeSayisi = 10;
-      let uretilenBilyeSayisi = 0;
+      let renkCesitliligi = 2; // "Top Sayısı" -> Kaç farklı renk olacağı (2, 3 veya 4)
       let oyunAktif = false;
       
       const seviyeHizlari = {
@@ -16,7 +15,10 @@
         6: 0.09,  7: 0.11,  8: 0.13,  9: 0.16,  10: 0.20
       };
 
-      // MENÜ VE AYAR BİLEŞENLERİ
+      // Tüm olası renkler (Seçime göre oyun içinden çekilecek)
+      const renkHavuzu = ['#0000FF', '#FF0000', '#00FF00', '#FFFF00']; // Mavi, Kırmızı, Yeşil, Sarı
+
+      // MENÜ BİLEŞENİ
       AFRAME.registerComponent('menu-butonu', {
         schema: { tip: {type: 'string'}, deger: {type: 'int'} },
         init: function () {
@@ -25,8 +27,8 @@
               if (this.data.tip === 'seviye') {
                 mevcutSeviye = this.data.deger;
                 guncelleMenuMetinleri();
-              } else if (this.data.tip === 'top') {
-                toplamBilyeSayisi = this.data.deger;
+              } else if (this.data.tip === 'top_cesidi') {
+                renkCesitliligi = this.data.deger;
                 guncelleMenuMetinleri();
               } else if (this.data.tip === 'basla') {
                 oyunBaslat();
@@ -67,64 +69,63 @@
           
           if (this.durum === "ana-kanal") {
             pos.y -= this.hiz; 
-            if (pos.y <= 2.9) { // Tam switch'in üstü
+            if (pos.y <= 2.9) { 
               let switchEl = document.querySelector('#anaSwitch');
               let switchYonu = switchEl.components['bilye-switch'].yon;
               this.durum = switchYonu === "sol" ? "sol-kanal" : "sag-kanal";
             }
           } 
           else if (this.durum === "sol-kanal") {
-            // Sol kanal tüpünün eğimine göre hareket (Aşağı ve Sola)
             pos.y -= this.hiz * 0.8;
             pos.x -= this.hiz * 0.6;
           } 
           else if (this.durum === "sag-kanal") {
-            // Sağ kanal tüpünün eğimine göre hareket (Aşağı ve Sağa)
             pos.y -= this.hiz * 0.8;
             pos.x += this.hiz * 0.6;
           }
 
           this.el.setAttribute('position', pos);
 
-          // Hazneye ulaşınca sil ve yenisini fırlat
+          // Hazne seviyesine gelince sil ve yeni bilye üret (Sonsuz döngü)
           if (pos.y < 0.6) {
             this.el.parentNode.removeChild(this.el);
-            uretilenBilyeSayisi++;
-            
-            if (uretilenBilyeSayisi < toplamBilyeSayisi) {
-              setTimeout(bilyeUret, 1000);
-            } else {
-              oyunBitti();
-            }
+            setTimeout(bilyeUret, 800);
           }
         }
       });
 
       function guncelleMenuMetinleri() {
-        document.querySelector('#secilenSeviyeTxt').setAttribute('value', 'Secilen Seviye: ' + mevcutSeviye);
-        document.querySelector('#secilenTopTxt').setAttribute('value', 'Top Sayisi: ' + toplamBilyeSayisi);
+        document.querySelector('#secilenSeviyeTxt').setAttribute('value', 'Hiz Seviyesi: ' + mevcutSeviye);
+        document.querySelector('#secilenTopTxt').setAttribute('value', 'Top Renk Sayisi: ' + renkCesitliligi);
       }
 
       function oyunBaslat() {
         oyunAktif = true;
-        uretilenBilyeSayisi = 0;
         document.querySelector('#girişMenüsü').setAttribute('visible', 'false');
-        document.querySelector('#girişMenüsü').removeAttribute('class'); // tıklamaları kapat
+        document.querySelector('#girişMenüsü').removeAttribute('class'); 
+        
+        // Seçilen renk sayısına göre hazneleri görünür yapalım
+        hazneleriAyarla();
+        
         setTimeout(bilyeUret, 1000);
       }
 
-      function oyunBitti() {
-        oyunAktif = false;
-        alert("Oyun Bitti! Belirlenen bilye sayısına ulaşıldı.");
-        location.reload(); // Sayfayı yenileyip menüye döner
+      function hazneleriAyarla() {
+        // Seçilen renk sayısına göre hedef haznelerin renklerini ve görünürlüğünü günceller
+        document.querySelector('#hazneSol').setAttribute('color', renkHavuzu[0]);
+        document.querySelector('#hazneSag').setAttribute('color', renkHavuzu[1]);
+        
+        // Eğer 3 veya 4 renk seçildiyse ek görsel düzenlemeler buraya genişletilebilir
       }
 
       function bilyeUret() {
         if (!oyunAktif) return;
         let scene = document.querySelector('a-scene');
         let yeniBilye = document.createElement('a-sphere');
-        let renkler = ['#FF0000', '#0000FF'];
-        let rastgeleRenk = renkler[Math.floor(Math.random() * renkler.length)];
+        
+        // Sadece seçilen "top sayısı" (renk adedi) kadar rengi havuzdan aktif et
+        let aktifRenkler = renkHavuzu.slice(0, renkCesitliligi);
+        let rastgeleRenk = aktifRenkler[Math.floor(Math.random() * aktifRenkler.length)];
         
         yeniBilye.setAttribute('radius', '0.12');
         yeniBilye.setAttribute('color', rastgeleRenk);
@@ -147,18 +148,18 @@
         <a-plane color="#2c3e50" width="2.2" height="1.8" opacity="0.95"></a-plane>
         <a-text value="BILYE SIRALAMA" align="center" position="0 0.7 0.05" width="4" color="#FFF"></a-text>
         
-        <a-text id="secilenSeviyeTxt" value="Secilen Seviye: 1" align="center" position="0 0.4 0.05" width="3" color="#f1c40f"></a-text>
-        <a-text id="secilenTopTxt" value="Top Sayisi: 10" align="center" position="0 0.2 0.05" width="3" color="#f1c40f"></a-text>
+        <a-text id="secilenSeviyeTxt" value="Hiz Seviyesi: 1" align="center" position="0 0.4 0.05" width="3" color="#f1c40f"></a-text>
+        <a-text id="secilenTopTxt" value="Top Renk Sayisi: 2" align="center" position="0 0.2 0.05" width="3" color="#f1c40f"></a-text>
 
-        <a-text value="Seviye Sec:" position="-0.9 -0.1 0.05" width="2.5" color="#FFF"></a-text>
-        <a-box class="tıklanabilir" menu-butonu="tip: seviye; deger: 1" position="-0.4 -0.1 0.05" width="0.15" height="0.15" depth="0.05" color="#3498db"><a-text value="1" align="center" position="0 0 0.03" width="3"></a-text></a-box>
-        <a-box class="tıklanabilir" menu-butonu="tip: seviye; deger: 5" position="-0.2 -0.1 0.05" width="0.15" height="0.15" depth="0.05" color="#3498db"><a-text value="5" align="center" position="0 0 0.03" width="3"></a-text></a-box>
-        <a-box class="tıklanabilir" menu-butonu="tip: seviye; deger: 10" position="0 -0.1 0.05" width="0.15" height="0.15" depth="0.05" color="#3498db"><a-text value="10" align="center" position="0 0 0.03" width="3"></a-text></a-box>
+        <a-text value="Hiz (Seviye):" position="-0.9 -0.1 0.05" width="2.5" color="#FFF"></a-text>
+        <a-box class="tıklanabilir" menu-butonu="tip: seviye; deger: 1" position="-0.3 -0.1 0.05" width="0.15" height="0.15" depth="0.05" color="#3498db"><a-text value="1" align="center" position="0 0 0.03" width="3"></a-text></a-box>
+        <a-box class="tıklanabilir" menu-butonu="tip: seviye; deger: 5" position="-0.1 -0.1 0.05" width="0.15" height="0.15" depth="0.05" color="#3498db"><a-text value="5" align="center" position="0 0 0.03" width="3"></a-text></a-box>
+        <a-box class="tıklanabilir" menu-butonu="tip: seviye; deger: 10" position="0.1 -0.1 0.05" width="0.15" height="0.15" depth="0.05" color="#3498db"><a-text value="10" align="center" position="0 0 0.03" width="3"></a-text></a-box>
 
-        <a-text value="Top Sayisi:" position="-0.9 -0.4 0.05" width="2.5" color="#FFF"></a-text>
-        <a-box class="tıklanabilir" menu-butonu="tip: top; deger: 10" position="-0.4 -0.4 0.05" width="0.18" height="0.15" depth="0.05" color="#9b59b6"><a-text value="10" align="center" position="0 0 0.03" width="3"></a-text></a-box>
-        <a-box class="tıklanabilir" menu-butonu="tip: top; deger: 20" position="-0.15 -0.4 0.05" width="0.18" height="0.15" depth="0.05" color="#9b59b6"><a-text value="20" align="center" position="0 0 0.03" width="3"></a-text></a-box>
-        <a-box class="tıklanabilir" menu-butonu="tip: top; deger: 50" position="0.1 -0.4 0.05" width="0.18" height="0.15" depth="0.05" color="#9b59b6"><a-text value="50" align="center" position="0 0 0.03" width="3"></a-text></a-box>
+        <a-text value="Top Sayisi (Renk):" position="-0.9 -0.4 0.05" width="2.5" color="#FFF"></a-text>
+        <a-box class="tıklanabilir" menu-butonu="tip: top_cesidi; deger: 2" position="-0.3 -0.4 0.05" width="0.15" height="0.15" depth="0.05" color="#9b59b6"><a-text value="2" align="center" position="0 0 0.03" width="3"></a-text></a-box>
+        <a-box class="tıklanabilir" menu-butonu="tip: top_cesidi; deger: 3" position="-0.1 -0.4 0.05" width="0.15" height="0.15" depth="0.05" color="#9b59b6"><a-text value="3" align="center" position="0 0 0.03" width="3"></a-text></a-box>
+        <a-box class="tıklanabilir" menu-butonu="tip: top_cesidi; deger: 4" position="0.1 -0.4 0.05" width="0.15" height="0.15" depth="0.05" color="#9b59b6"><a-text value="4" align="center" position="0 0 0.03" width="3"></a-text></a-box>
 
         <a-box class="tıklanabilir" menu-butonu="tip: basla" position="0 -0.7 0.05" width="0.6" height="0.2" depth="0.05" color="#2ecc71">
           <a-text value="BASLA" align="center" position="0 0 0.03" width="4" color="#FFF"></a-text>
@@ -175,9 +176,9 @@
       <a-cylinder position="0.75 1.95 -3" radius="0.15" height="2.0" rotation="0 0 -37" color="#bdc3c7" open-ended="true" material="side: double"></a-cylinder>
 
 
-      <a-box position="-1.4 0.6 -3" width="0.6" height="0.6" depth="0.6" color="#0000FF" opacity="0.6"></a-box>
+      <a-box id="hazneSol" position="-1.4 0.6 -3" width="0.6" height="0.6" depth="0.6" color="#0000FF" opacity="0.6"></a-box>
       
-      <a-box position="1.4 0.6 -3" width="0.6" height="0.6" depth="0.6" color="#FF0000" opacity="0.6"></a-box>
+      <a-box id="hazneSki" id="hazneSag" position="1.4 0.6 -3" width="0.6" height="0.6" depth="0.6" color="#FF0000" opacity="0.6"></a-box>
 
     </a-scene>
   </body>
